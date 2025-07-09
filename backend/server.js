@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const Anthropic = require('@anthropic-ai/sdk');
-const { EDUCATIONAL_PROMPT, QUESTION_ANALYSIS_PROMPT, CONCEPT_EXPLANATION_PROMPT, CONCEPT_RELATION_PROMPT, COMBINED_CONCEPT_PROMPT, FORMULA_GENERATION_PROMPT } = require('./prompts');
+const { EDUCATIONAL_PROMPT, QUESTION_ANALYSIS_PROMPT, COMBINED_CONCEPT_PROMPT, FORMULA_GENERATION_PROMPT } = require('./prompts');
 
 dotenv.config();
 
@@ -17,6 +17,53 @@ const anthropic = new Anthropic({
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Utility functions
+const parseJsonResponse = (text) => {
+  let jsonText = text;
+  
+  // Remove markdown code blocks if present
+  if (jsonText.includes('```json')) {
+    jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```/, '');
+  }
+  
+  return JSON.parse(jsonText.trim());
+};
+
+const handleStreamingResponse = async (stream, res) => {
+  for await (const chunk of stream) {
+    if (chunk.type === 'content_block_delta') {
+      res.write(`data: ${JSON.stringify({ type: 'content', text: chunk.delta.text })}\n\n`);
+    } else if (chunk.type === 'message_stop') {
+      res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
+      break;
+    }
+  }
+  res.end();
+};
+
+const setupStreamingHeaders = (res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
+};
+
+const handleStreamingError = (res, message = 'Failed to process message') => {
+  res.write(`data: ${JSON.stringify({ type: 'error', message })}\n\n`);
+  res.end();
+};
+
+const createAnthropicMessage = async (model, maxTokens, messages, systemPrompt, stream = false) => {
+  return await anthropic.messages.create({
+    model,
+    max_tokens: maxTokens,
+    messages,
+    system: systemPrompt,
+    ...(stream && { stream: true })
+  });
+};
 
 
 // Initial chat endpoint with question analysis
@@ -42,14 +89,7 @@ app.post('/api/chat/initial', async (req, res) => {
 
     let analysis;
     try {
-      let jsonText = analysisResponse.content[0].text;
-      
-      // Remove markdown code blocks if present
-      if (jsonText.includes('```json')) {
-        jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```/, '');
-      }
-      
-      analysis = JSON.parse(jsonText.trim());
+      analysis = parseJsonResponse(analysisResponse.content[0].text);
       console.log('Parsed analysis:', analysis);
     } catch (parseError) {
       console.warn('Failed to parse analysis JSON:', parseError);
@@ -64,49 +104,29 @@ app.post('/api/chat/initial', async (req, res) => {
     }
 
     if (stream) {
-      // Set up streaming response
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
-
+      setupStreamingHeaders(res);
+      
       // Send analysis first
       res.write(`data: ${JSON.stringify({ type: 'analysis', analysis })}\n\n`);
 
       // Second call: Generate educational response with streaming
-      const educationalStream = await anthropic.messages.create({
-        model: 'claude-3-7-sonnet-latest',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: message
-        }],
-        system: EDUCATIONAL_PROMPT,
-        stream: true
-      });
+      const educationalStream = await createAnthropicMessage(
+        'claude-3-7-sonnet-latest',
+        1000,
+        [{ role: 'user', content: message }],
+        EDUCATIONAL_PROMPT,
+        true
+      );
 
-      for await (const chunk of educationalStream) {
-        if (chunk.type === 'content_block_delta') {
-          res.write(`data: ${JSON.stringify({ type: 'content', text: chunk.delta.text })}\n\n`);
-        } else if (chunk.type === 'message_stop') {
-          res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
-          break;
-        }
-      }
-
-      res.end();
+      await handleStreamingResponse(educationalStream, res);
     } else {
       // Regular non-streaming response
-      const educationalResponse = await anthropic.messages.create({
-        model: 'claude-3-7-sonnet-latest',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: message
-        }],
-        system: EDUCATIONAL_PROMPT
-      });
+      const educationalResponse = await createAnthropicMessage(
+        'claude-3-7-sonnet-latest',
+        1000,
+        [{ role: 'user', content: message }],
+        EDUCATIONAL_PROMPT
+      );
 
       const assistantMessage = educationalResponse.content[0].text;
 
@@ -120,8 +140,7 @@ app.post('/api/chat/initial', async (req, res) => {
   } catch (error) {
     console.error('Error calling Claude API:', error);
     if (req.body.stream) {
-      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to process message' })}\n\n`);
-      res.end();
+      handleStreamingError(res, 'Failed to process message');
     } else {
       res.status(500).json({
         error: 'Failed to process message',
@@ -174,40 +193,26 @@ app.post('/api/chat', async (req, res) => {
     ];
 
     if (stream) {
-      // Set up streaming response
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
+      setupStreamingHeaders(res);
 
       // Call Claude API with streaming
-      const stream = await anthropic.messages.create({
-        model: 'claude-3-7-sonnet-latest',
-        max_tokens: 1000,
-        messages: messages.slice(1), // Remove system message from messages array
-        system: EDUCATIONAL_PROMPT,
-        stream: true
-      });
+      const streamResponse = await createAnthropicMessage(
+        'claude-3-7-sonnet-latest',
+        1000,
+        messages.slice(1), // Remove system message from messages array
+        EDUCATIONAL_PROMPT,
+        true
+      );
 
-      for await (const chunk of stream) {
-        if (chunk.type === 'content_block_delta') {
-          res.write(`data: ${JSON.stringify({ type: 'content', text: chunk.delta.text })}\n\n`);
-        } else if (chunk.type === 'message_stop') {
-          res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
-          break;
-        }
-      }
-
-      res.end();
+      await handleStreamingResponse(streamResponse, res);
     } else {
       // Regular non-streaming response
-      const response = await anthropic.messages.create({
-        model: 'claude-3-7-sonnet-latest',
-        max_tokens: 1000,
-        messages: messages.slice(1), // Remove system message from messages array
-        system: EDUCATIONAL_PROMPT
-      });
+      const response = await createAnthropicMessage(
+        'claude-3-7-sonnet-latest',
+        1000,
+        messages.slice(1), // Remove system message from messages array
+        EDUCATIONAL_PROMPT
+      );
 
       const assistantMessage = response.content[0].text;
 
@@ -220,8 +225,7 @@ app.post('/api/chat', async (req, res) => {
   } catch (error) {
     console.error('Error calling Claude API:', error);
     if (req.body.stream) {
-      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to process message' })}\n\n`);
-      res.end();
+      handleStreamingError(res, 'Failed to process message');
     } else {
       res.status(500).json({
         error: 'Failed to process message',
@@ -255,14 +259,7 @@ app.post('/api/concept/combined', async (req, res) => {
 
     let conceptData;
     try {
-      let jsonText = response.content[0].text;
-      
-      // Remove markdown code blocks if present
-      if (jsonText.includes('```json')) {
-        jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```/, '');
-      }
-      
-      conceptData = JSON.parse(jsonText.trim());
+      conceptData = parseJsonResponse(response.content[0].text);
     } catch (parseError) {
       console.warn('Failed to parse concept JSON:', parseError);
       console.warn('Raw response was:', response.content[0].text);
@@ -287,25 +284,14 @@ app.post('/api/formulas/categories', async (req, res) => {
   try {
     const { resources } = req.body;
 
-    // If resources are provided directly, return them as categories
-    if (resources && Array.isArray(resources)) {
-      const categories = resources.map((resource, index) => ({
-        id: resource.toLowerCase().replace(/\s+/g, '-'),
-        name: resource
-      }));
-      
-      res.json({
-        categories: categories,
-        success: true
-      });
-      return;
-    }
-
-    // No resources provided, return empty categories
-    res.json({
-      categories: [],
-      success: true
-    });
+    const categories = resources && Array.isArray(resources) 
+      ? resources.map((resource) => ({
+          id: resource.toLowerCase().replace(/\s+/g, '-'),
+          name: resource
+        }))
+      : [];
+    
+    res.json({ categories, success: true });
 
   } catch (error) {
     console.error('Error fetching formula categories:', error);
@@ -343,11 +329,7 @@ app.post('/api/formulas', async (req, res) => {
 
     let formulaData;
     try {
-      let jsonText = response.content[0].text;
-      if (jsonText.includes('```json')) {
-        jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```/, '');
-      }
-      formulaData = JSON.parse(jsonText.trim());
+      formulaData = parseJsonResponse(response.content[0].text);
     } catch (parseError) {
       console.warn('Failed to parse formula JSON:', parseError);
       console.warn('Raw response was:', response.content[0].text);
@@ -375,7 +357,7 @@ app.post('/api/formulas', async (req, res) => {
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
