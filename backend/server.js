@@ -139,7 +139,7 @@ app.post('/api/chat/initial', async (req, res) => {
   }
 });
 
-// Regular chat endpoint with streaming support
+// Regular chat endpoint with streaming
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, conversation = [] } = req.body;

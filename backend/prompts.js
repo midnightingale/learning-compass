@@ -75,9 +75,7 @@ DO NOT highlight the first word/concept you are already explaining!! You must ke
 Then, for relation, explain why [CONCEPT] is important in this problem, in middle school language, 
 in order to help me understand the concept in the context of the problem.
 Don't begin with '[CONCEPT] is related because', just get into it. 
-You must keep it in fewer than 3 sentences!!! All sentences must be <15 words.
-
-remember, don't reference 
+You must keep it in fewer than 3 sentences!!! All sentences must be <15 words. Don't highlight any terms in the relation section.
 
 Return ONLY valid JSON with no formatting or markdown:
 
@@ -87,40 +85,12 @@ Return ONLY valid JSON with no formatting or markdown:
 }
 
 Problem context: [PROBLEM_CONTEXT]
-Concept: `;
+Concept:  [CONCEPT]
+`;
 
-const FORMULA_GENERATION_PROMPT = `
-generate formula information for this resource, specifically relevant to the given problem: [PROBLEM]. return ONLY valid JSON with no formatting or markdown:
-
-{
-  "title": "string",
-  "formula": "string",
-  "variables": [
-    {
-      "symbol": "string",
-      "name": "string", 
-      "description": "string"
-    }
-  ]
-}
-
-rules:
-- title: clear, concise name for the formula set (e.g., "Kinematic Equations", "Energy Conservation")
-- formula: LaTeX formatted primary formula most relevant to this problem (e.g., "v = v_0 + at", "KE = 1/2 mv^2")
-- variables: array of all variables in the formula
-- symbol: LaTeX symbol as it appears in formula (e.g., "v_0", "\\Delta x", "\\vec{F}")
-- name: simple variable name (e.g., "initial velocity", "displacement", "force")
-- description: brief explanation of what the variable represents
-- use LaTeX formatting for formulas and symbols
-- focus on the most commonly used formula for the resource that applies to this specific problem
-- keep descriptions simple and clear for middle school level
-
-problem: [PROBLEM]
-resource name: `;
 
 module.exports = {
   CHAT_TUTOR_PROMPT,
   QUESTION_ANALYSIS_PROMPT,
   COMBINED_CONCEPT_PROMPT,
-  FORMULA_GENERATION_PROMPT
 };
