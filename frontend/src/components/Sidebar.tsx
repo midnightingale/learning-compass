@@ -103,8 +103,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
         variables: formula.variables
       };
       
-      // Add to top of formula cards
-      setFormulaCards(prev => [newCard, ...prev]);
+      // Add to end of formula cards
+      setFormulaCards(prev => [...prev, newCard]);
       
       // Remove the button from available categories
       setFormulaCategories(prev => prev.filter(cat => cat.id !== categoryId));
