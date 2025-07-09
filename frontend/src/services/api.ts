@@ -363,7 +363,7 @@ export const apiService = {
 
   async explainConceptCombined(concept: string, problemContext?: string): Promise<CombinedConceptResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/concept/combined`, {
+      const response = await fetch(`${API_BASE_URL}/concept`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

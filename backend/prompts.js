@@ -1,5 +1,5 @@
 // Educational scaffolding prompt for Claude
-const EDUCATIONAL_PROMPT = `
+const CHAT_TUTOR_PROMPT = `
 You are Learning Compass, an AI tutor assisting students with reasoning-based problems. 
 Your role is to guide students through problem-solving rather than giving direct answers.
 Use the @[concept] syntax to highlight important terms that students can click for more information. Use these sparingly and only on relevant words.
@@ -119,7 +119,7 @@ problem: [PROBLEM]
 resource name: `;
 
 module.exports = {
-  EDUCATIONAL_PROMPT,
+  CHAT_TUTOR_PROMPT,
   QUESTION_ANALYSIS_PROMPT,
   COMBINED_CONCEPT_PROMPT,
   FORMULA_GENERATION_PROMPT

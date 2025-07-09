@@ -2,12 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const Anthropic = require('@anthropic-ai/sdk');
-const { EDUCATIONAL_PROMPT, QUESTION_ANALYSIS_PROMPT, COMBINED_CONCEPT_PROMPT, FORMULA_GENERATION_PROMPT } = require('./prompts');
+const { CHAT_TUTOR_PROMPT, QUESTION_ANALYSIS_PROMPT, COMBINED_CONCEPT_PROMPT } = require('./prompts');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const MODEL = 'claude-sonnet-4-20250514';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -19,15 +20,22 @@ app.use(cors());
 app.use(express.json());
 
 // Utility functions
+
 const parseJsonResponse = (text) => {
-  let jsonText = text;
-  
-  // Remove markdown code blocks if present
-  if (jsonText.includes('```json')) {
-    jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```/, '');
+  try {
+    let jsonText = text;
+    
+    // Claude tends to prefix json responses with ```json even if instructed not to, so we remove this
+    if (jsonText.includes('```json')) {
+      jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```/, '');
+    }
+    
+    return JSON.parse(jsonText.trim());
+  } catch (parseError) {
+    console.warn('Failed to parse JSON response:', parseError);
+    console.warn('Raw response was:', text);
+    return null;
   }
-  
-  return JSON.parse(jsonText.trim());
 };
 
 const handleStreamingResponse = async (stream, res) => {
@@ -50,9 +58,24 @@ const setupStreamingHeaders = (res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
 };
 
-const handleStreamingError = (res, message = 'Failed to process message') => {
+const handleAPIError = (res, message = 'Failed to process message') => {
   res.write(`data: ${JSON.stringify({ type: 'error', message })}\n\n`);
   res.end();
+};
+
+const buildConversationMessages = (message, conversation = []) => {
+  return [
+    // Add previous conversation
+    ...conversation.map(msg => ({
+      role: msg.type === 'user' ? 'user' : 'assistant',
+      content: msg.content
+    })),
+    // Add current message
+    {
+      role: 'user',
+      content: message
+    }
+  ];
 };
 
 const createAnthropicMessage = async (model, maxTokens, messages, systemPrompt, stream = false) => {
@@ -66,177 +89,87 @@ const createAnthropicMessage = async (model, maxTokens, messages, systemPrompt, 
 };
 
 
-// Initial chat endpoint with question analysis
+// Initial chat endpoint with question analysis:
+// Sends the question for analysis, then grabs the first message from the tutor chatbot
 app.post('/api/chat/initial', async (req, res) => {
   try {
-    const { message, stream = false } = req.body;
+    const { message } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
     // First call: Analyze the question structure
-    const analysisResponse = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-latest',
-      max_tokens: 2500,
-      messages: [{
-        role: 'user',
-        content: QUESTION_ANALYSIS_PROMPT + message
-      }]
-    });
+    const analysisResponse = await createAnthropicMessage(
+      MODEL,
+      2500,
+      [{ role: 'user', content: QUESTION_ANALYSIS_PROMPT + message }]
+    );
 
     console.log('Analysis response:', analysisResponse.content[0].text);
 
-    let analysis;
-    try {
-      analysis = parseJsonResponse(analysisResponse.content[0].text);
-      console.log('Parsed analysis:', analysis);
-    } catch (parseError) {
-      console.warn('Failed to parse analysis JSON:', parseError);
-      console.warn('Raw response was:', analysisResponse.content[0].text);
-      analysis = {
-        title: "Problem Analysis",
-        quantities: [],
-        goal: null,
-        problemSummary: "Problem analysis unavailable",
-        formulas: []
-      };
-    }
+    const analysis = parseJsonResponse(analysisResponse.content[0].text) || {
+      title: "Problem Analysis",
+      quantities: [],
+      goal: null,
+      problemSummary: "Problem analysis unavailable",
+      formulas: []
+    };
+    console.log('Parsed analysis:', analysis);
 
-    if (stream) {
-      setupStreamingHeaders(res);
-      
-      // Send analysis first
-      res.write(`data: ${JSON.stringify({ type: 'analysis', analysis })}\n\n`);
+    setupStreamingHeaders(res);
 
-      // Second call: Generate educational response with streaming
-      const educationalStream = await createAnthropicMessage(
-        'claude-3-7-sonnet-latest',
-        1000,
-        [{ role: 'user', content: message }],
-        EDUCATIONAL_PROMPT,
-        true
-      );
+    // Send analysis first
+    res.write(`data: ${JSON.stringify({ type: 'analysis', analysis })}\n\n`);
 
-      await handleStreamingResponse(educationalStream, res);
-    } else {
-      // Regular non-streaming response
-      const educationalResponse = await createAnthropicMessage(
-        'claude-3-7-sonnet-latest',
-        1000,
-        [{ role: 'user', content: message }],
-        EDUCATIONAL_PROMPT
-      );
+    // Second call: get the first chat message from the chat tutor
+    const chatStream = await createAnthropicMessage(
+      MODEL,
+      1000,
+      [{ role: 'user', content: message }],
+      CHAT_TUTOR_PROMPT,
+      true
+    );
 
-      const assistantMessage = educationalResponse.content[0].text;
-
-      res.json({
-        message: assistantMessage,
-        analysis: analysis,
-        success: true
-      });
-    }
+    await handleStreamingResponse(chatStream, res);
 
   } catch (error) {
     console.error('Error calling Claude API:', error);
-    if (req.body.stream) {
-      handleStreamingError(res, 'Failed to process message');
-    } else {
-      res.status(500).json({
-        error: 'Failed to process message',
-        details: error.message
-      });
-    }
+    handleAPIError(res, 'Failed to process message');
   }
 });
 
 // Regular chat endpoint with streaming support
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, conversation = [], images = [], stream = false } = req.body;
+    const { message, conversation = [] } = req.body;
 
-    if (!message && (!images || images.length === 0)) {
-      return res.status(400).json({ error: 'Message or image is required' });
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Build conversation history for Claude
-    const messages = [
-      {
-        role: 'system',
-        content: EDUCATIONAL_PROMPT
-      },
-      // Add previous conversation
-      ...conversation.map(msg => ({
-        role: msg.type === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      })),
-      // Add current message with images if present
-      {
-        role: 'user',
-        content: images.length > 0 
-          ? [
-              ...images.map(img => ({
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: img.type,
-                  data: img.data
-                }
-              })),
-              {
-                type: 'text',
-                text: message || "What can you help me understand about this image?"
-              }
-            ]
-          : (message || "What can you help me understand about this image?")
-      }
-    ];
+    const messages = buildConversationMessages(message, conversation);
 
-    if (stream) {
-      setupStreamingHeaders(res);
+    setupStreamingHeaders(res);
 
-      // Call Claude API with streaming
-      const streamResponse = await createAnthropicMessage(
-        'claude-3-7-sonnet-latest',
-        1000,
-        messages.slice(1), // Remove system message from messages array
-        EDUCATIONAL_PROMPT,
-        true
-      );
+    const streamResponse = await createAnthropicMessage(
+      MODEL,
+      1000,
+      messages,
+      CHAT_TUTOR_PROMPT,
+      true
+    );
 
-      await handleStreamingResponse(streamResponse, res);
-    } else {
-      // Regular non-streaming response
-      const response = await createAnthropicMessage(
-        'claude-3-7-sonnet-latest',
-        1000,
-        messages.slice(1), // Remove system message from messages array
-        EDUCATIONAL_PROMPT
-      );
-
-      const assistantMessage = response.content[0].text;
-
-      res.json({
-        message: assistantMessage,
-        success: true
-      });
-    }
+    await handleStreamingResponse(streamResponse, res);
 
   } catch (error) {
     console.error('Error calling Claude API:', error);
-    if (req.body.stream) {
-      handleStreamingError(res, 'Failed to process message');
-    } else {
-      res.status(500).json({
-        error: 'Failed to process message',
-        details: error.message
-      });
-    }
+    handleAPIError(res, 'Failed to process message');
   }
 });
 
 // Combined concept explanation and relation endpoint
-app.post('/api/concept/combined', async (req, res) => {
+app.post('/api/concept', async (req, res) => {
   try {
     const { concept, problemContext } = req.body;
 
@@ -248,22 +181,13 @@ app.post('/api/concept/combined', async (req, res) => {
       .replace(/\[CONCEPT\]/g, concept)
       .replace('[PROBLEM_CONTEXT]', problemContext || 'general STEM problem');
 
-    const response = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-latest',
-      max_tokens: 1000,
-      messages: [{
-        role: 'user',
-        content: prompt + concept
-      }]
-    });
+    const response = await createAnthropicMessage(
+      MODEL,
+      1000,
+      [{ role: 'user', content: prompt + concept }]
+    );
 
-    let conceptData;
-    try {
-      conceptData = parseJsonResponse(response.content[0].text);
-    } catch (parseError) {
-      console.warn('Failed to parse concept JSON:', parseError);
-      console.warn('Raw response was:', response.content[0].text);
-    }
+    const conceptData = parseJsonResponse(response.content[0].text) || {};
 
     res.json({
       ...conceptData,
@@ -274,83 +198,6 @@ app.post('/api/concept/combined', async (req, res) => {
     console.error('Error explaining concept:', error);
     res.status(500).json({
       error: 'Failed to explain concept',
-      details: error.message
-    });
-  }
-});
-
-// Formula categories endpoint - returns resources from analysis
-app.post('/api/formulas/categories', async (req, res) => {
-  try {
-    const { resources } = req.body;
-
-    const categories = resources && Array.isArray(resources) 
-      ? resources.map((resource) => ({
-          id: resource.toLowerCase().replace(/\s+/g, '-'),
-          name: resource
-        }))
-      : [];
-    
-    res.json({ categories, success: true });
-
-  } catch (error) {
-    console.error('Error fetching formula categories:', error);
-    res.status(500).json({
-      error: 'Failed to fetch formula categories',
-      details: error.message
-    });
-  }
-});
-
-// Formula generation endpoint
-app.post('/api/formulas', async (req, res) => {
-  try {
-    const { categoryId, problemContext } = req.body;
-
-    if (!categoryId) {
-      return res.status(400).json({ error: 'Category ID is required' });
-    }
-
-    // Convert category ID back to resource name
-    const resourceName = categoryId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-    const prompt = FORMULA_GENERATION_PROMPT
-      .replace('[PROBLEM]', problemContext || 'general STEM problem')
-      .replace('[RESOURCE]', resourceName);
-
-    const response = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-latest',
-      max_tokens: 1000,
-      messages: [{
-        role: 'user',
-        content: prompt + resourceName
-      }]
-    });
-
-    let formulaData;
-    try {
-      formulaData = parseJsonResponse(response.content[0].text);
-    } catch (parseError) {
-      console.warn('Failed to parse formula JSON:', parseError);
-      console.warn('Raw response was:', response.content[0].text);
-      
-      // Fallback formula
-      formulaData = {
-        title: resourceName,
-        formula: "Formula not available",
-        variables: []
-      };
-    }
-
-    res.json({
-      ...formulaData,
-      success: true
-    });
-
-  } catch (error) {
-    console.error('Error generating formula:', error);
-    res.status(500).json({
-      error: 'Failed to generate formula',
       details: error.message
     });
   }
