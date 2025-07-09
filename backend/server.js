@@ -31,7 +31,7 @@ app.post('/api/chat/initial', async (req, res) => {
     // First call: Analyze the question structure
     const analysisResponse = await anthropic.messages.create({
       model: 'claude-3-7-sonnet-latest',
-      max_tokens: 500,
+      max_tokens: 2500,
       messages: [{
         role: 'user',
         content: QUESTION_ANALYSIS_PROMPT + message
@@ -231,78 +231,6 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// Concept explanation endpoint
-app.post('/api/concept/explain', async (req, res) => {
-  try {
-    const { concept, problemContext } = req.body;
-
-    if (!concept) {
-      return res.status(400).json({ error: 'Concept is required' });
-    }
-
-    const prompt = CONCEPT_EXPLANATION_PROMPT
-      .replace('[CONCEPT]', concept)
-      .replace('[PROBLEM_CONTEXT]', problemContext || 'general STEM problem');
-
-    const response = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-latest',
-      max_tokens: 500,
-      messages: [{
-        role: 'user',
-        content: prompt + concept
-      }]
-    });
-
-    res.json({
-      explanation: response.content[0].text,
-      success: true
-    });
-
-  } catch (error) {
-    console.error('Error explaining concept:', error);
-    res.status(500).json({
-      error: 'Failed to explain concept',
-      details: error.message
-    });
-  }
-});
-
-// Concept relation endpoint  
-app.post('/api/concept/relate', async (req, res) => {
-  try {
-    const { concept, problemContext } = req.body;
-
-    if (!concept) {
-      return res.status(400).json({ error: 'Concept is required' });
-    }
-
-    const prompt = CONCEPT_RELATION_PROMPT
-      .replace('[CONCEPT]', concept)
-      .replace('[PROBLEM_CONTEXT]', problemContext || 'general STEM problem');
-
-    const response = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-latest',
-      max_tokens: 300,
-      messages: [{
-        role: 'user',
-        content: prompt + concept
-      }]
-    });
-
-    res.json({
-      relation: response.content[0].text,
-      success: true
-    });
-
-  } catch (error) {
-    console.error('Error explaining concept relation:', error);
-    res.status(500).json({
-      error: 'Failed to explain concept relation',
-      details: error.message
-    });
-  }
-});
-
 // Combined concept explanation and relation endpoint
 app.post('/api/concept/combined', async (req, res) => {
   try {
@@ -318,7 +246,7 @@ app.post('/api/concept/combined', async (req, res) => {
 
     const response = await anthropic.messages.create({
       model: 'claude-3-7-sonnet-latest',
-      max_tokens: 500,
+      max_tokens: 1000,
       messages: [{
         role: 'user',
         content: prompt + concept
@@ -338,33 +266,6 @@ app.post('/api/concept/combined', async (req, res) => {
     } catch (parseError) {
       console.warn('Failed to parse concept JSON:', parseError);
       console.warn('Raw response was:', response.content[0].text);
-      
-      // Fallback to separate calls
-      const explanationPrompt = CONCEPT_EXPLANATION_PROMPT
-        .replace('[CONCEPT]', concept)
-        .replace('[PROBLEM_CONTEXT]', problemContext || 'general STEM problem');
-      
-      const relationPrompt = CONCEPT_RELATION_PROMPT
-        .replace('[CONCEPT]', concept)
-        .replace('[PROBLEM_CONTEXT]', problemContext || 'general STEM problem');
-
-      const [explanationResponse, relationResponse] = await Promise.all([
-        anthropic.messages.create({
-          model: 'claude-3-7-sonnet-latest',
-          max_tokens: 300,
-          messages: [{ role: 'user', content: explanationPrompt + concept }]
-        }),
-        anthropic.messages.create({
-          model: 'claude-3-7-sonnet-latest',
-          max_tokens: 200,
-          messages: [{ role: 'user', content: relationPrompt + concept }]
-        })
-      ]);
-
-      conceptData = {
-        explanation: explanationResponse.content[0].text,
-        relation: relationResponse.content[0].text
-      };
     }
 
     res.json({
@@ -384,7 +285,7 @@ app.post('/api/concept/combined', async (req, res) => {
 // Formula categories endpoint - returns resources from analysis
 app.post('/api/formulas/categories', async (req, res) => {
   try {
-    const { problemContext, resources } = req.body;
+    const { resources } = req.body;
 
     // If resources are provided directly, return them as categories
     if (resources && Array.isArray(resources)) {
@@ -400,47 +301,11 @@ app.post('/api/formulas/categories', async (req, res) => {
       return;
     }
 
-    // Fallback: re-analyze the problem context if no resources provided
-    if (problemContext) {
-      const analysisResponse = await anthropic.messages.create({
-        model: 'claude-3-7-sonnet-latest',
-        max_tokens: 500,
-        messages: [{
-          role: 'user',
-          content: QUESTION_ANALYSIS_PROMPT + problemContext
-        }]
-      });
-
-      let analysis;
-      try {
-        let jsonText = analysisResponse.content[0].text;
-        if (jsonText.includes('```json')) {
-          jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```/, '');
-        }
-        analysis = JSON.parse(jsonText.trim());
-        
-        const categories = (analysis.resources || []).map((resource, index) => ({
-          id: resource.toLowerCase().replace(/\s+/g, '-'),
-          name: resource
-        }));
-        
-        res.json({
-          categories: categories,
-          success: true
-        });
-      } catch (parseError) {
-        console.warn('Failed to parse analysis for categories:', parseError);
-        res.json({
-          categories: [],
-          success: true
-        });
-      }
-    } else {
-      res.json({
-        categories: [],
-        success: true
-      });
-    }
+    // No resources provided, return empty categories
+    res.json({
+      categories: [],
+      success: true
+    });
 
   } catch (error) {
     console.error('Error fetching formula categories:', error);
