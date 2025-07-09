@@ -5,7 +5,7 @@ I decided to interview my sister Maddie, who's just finished the 11th grade. I�
 
 It turns out that the primary way that Maddie and her friends interact with LLMs is by pasting a question directly into the chat box. This means that:
 - The chat gets no context about the state of her knowledge -> 
-  - Chat can’t provide directed help for knowledge gaps
+  - It can’t provide directed help for knowledge gaps
 - Exercising agency over the conversation is a lot of work -> 
   - She doesn’t type out more context or ask detailed clarifying questions
 - She gets the answer immediately ->
