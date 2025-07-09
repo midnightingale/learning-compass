@@ -1,0 +1,14 @@
+.card {
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.card-light {
+  background: #FAF9F5;
+}
+
+.card-white {
+  background: white;
+  border: 1px solid #DAD9D5;
+}

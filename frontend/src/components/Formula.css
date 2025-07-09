@@ -1,0 +1,75 @@
+.formula-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.formula {
+  font-family: 'Times New Roman', serif;
+  font-size: 1.25rem;
+  color: #1A1A1A;
+  padding: 0.5rem;
+  background: #FAF9F5;
+  border-radius: 0.375rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 3rem;
+}
+
+.variables-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.variable-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+  padding: 0.25rem 0;
+}
+
+.variable-symbol {
+  font-family: 'Times New Roman', serif;
+  font-size: 1.1rem;
+  color: #1A1A1A;
+  min-width: 2rem;
+}
+
+.variable-name {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9rem;
+  color: #C96342;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.variable-name:hover {
+  color: #A94A2F;
+}
+
+.variable-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 2rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  color: #4b5563;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+  max-width: 250px;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.4;
+  width: fit-content;
+}

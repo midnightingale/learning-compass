@@ -1,0 +1,25 @@
+.send-button-shared {
+  background: #C96342;
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: fit-content;
+}
+
+.send-button-shared:hover:not(:disabled) {
+  background: #D97757;
+}
+
+.send-button-shared:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}

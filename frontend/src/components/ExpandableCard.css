@@ -1,0 +1,50 @@
+.expandable-card {
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.expandable-card-light {
+  background: #FAF9F5;
+}
+
+.expandable-card-white {
+  background: white;
+  border: 0.5px solid #DAD9D5;
+}
+
+.expandable-card-header {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.expandable-card-header:hover {
+  opacity: 0.8;
+}
+
+.expandable-card-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1A1A1A;
+  text-align: left;
+}
+
+.expandable-card-icon {
+  transition: transform 0.2s ease;
+  color: #787575;
+}
+
+.expandable-card-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.expandable-card-content {
+  padding: 0 1rem 1rem 1rem;
+}

@@ -1,0 +1,25 @@
+.add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.5rem 0.5rem;
+  font-size: 0.875rem;
+  color: #1A1A1A;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: fit-content;
+}
+
+.add-button:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.add-button-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
