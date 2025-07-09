@@ -3,6 +3,7 @@ import Card from './Card';
 import ExpandableCard from './ExpandableCard';
 import AddButton from './AddButton';
 import Formula from './Formula';
+import LoadingIndicator from './LoadingIndicator';
 import { apiService } from '../services/api';
 import { setGlobalConceptHandler } from '../utils/conceptHandler';
 import { parseHighlightedText } from '../utils/textParser';
@@ -15,6 +16,7 @@ interface ConceptCard {
   explanation: string;
   relation?: string;
   showRelation: boolean;
+  isLoading?: boolean;
 }
 
 interface FormulaCard {
@@ -34,9 +36,10 @@ interface SidebarProps {
   onClose: () => void;
   analysis: QuestionAnalysis | null;
   onConceptClick?: (concept: string) => void;
+  resetTrigger?: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigger = 0 }) => {
   const [showGoal, setShowGoal] = useState(false);
   const [showQuantities, setShowQuantities] = useState(false);
   const [cardOrder, setCardOrder] = useState<string[]>([]);
@@ -45,36 +48,36 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis }) => {
   // Cheat sheet state
   const [formulaCategories, setFormulaCategories] = useState<FormulaCategory[]>([]);
   const [formulaCards, setFormulaCards] = useState<FormulaCard[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
-  const [isLoadingFormulas, setIsLoadingFormulas] = useState(false);
+
+  // Reset all state when resetTrigger changes
+  useEffect(() => {
+    if (resetTrigger > 0) {
+      setShowGoal(false);
+      setShowQuantities(false);
+      setCardOrder([]);
+      setConceptCards([]);
+      setFormulaCategories([]);
+      setFormulaCards([]);
+    }
+  }, [resetTrigger]);
 
   // Set up global concept handler
   useEffect(() => {
     setGlobalConceptHandler(handleConceptClick);
   }, []);
   
-  // Fetch formula categories when analysis changes
+  // Set formula categories when analysis changes
   useEffect(() => {
-    if (analysis?.problemSummary) {
-      fetchFormulaCategories();
-    }
-  }, [analysis?.problemSummary]);
-  
-  const fetchFormulaCategories = async () => {
-    if (!analysis?.problemSummary || isLoadingCategories) return;
-    
-    setIsLoadingCategories(true);
-    try {
-      const categories = await apiService.getFormulaCategories(analysis.problemSummary, analysis.resources);
+    if (analysis?.formulas) {
+      const categories = analysis.formulas.map((formula, index) => ({
+        id: formula.title.toLowerCase().replace(/\s+/g, '-'),
+        name: formula.title
+      }));
       setFormulaCategories(categories);
-    } catch (error) {
-      console.error('Error fetching formula categories:', error);
-    } finally {
-      setIsLoadingCategories(false);
     }
-  };
+  }, [analysis?.formulas]);
   
-  const handleAddFormula = async (categoryId: string, categoryName: string) => {
+  const handleAddFormula = (categoryId: string, categoryName: string) => {
     // Check if we already have this formula card
     const existingCard = formulaCards.find(card => card.categoryId === categoryId);
     
@@ -84,16 +87,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis }) => {
       return;
     }
     
-    setIsLoadingFormulas(true);
-    try {
-      const response = await apiService.getFormulas(categoryId, analysis?.problemSummary);
-      
+    // Find the formula from analysis data
+    const formula = analysis?.formulas.find(f => 
+      f.title.toLowerCase().replace(/\s+/g, '-') === categoryId
+    );
+    
+    if (formula) {
       const newCard: FormulaCard = {
         id: Date.now().toString(),
         categoryId,
-        title: response.title || categoryName,
-        formula: response.formula,
-        variables: response.variables
+        title: formula.title,
+        formula: formula.formula,
+        variables: formula.variables
       };
       
       // Add to top of formula cards
@@ -101,59 +106,59 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis }) => {
       
       // Remove the button from available categories
       setFormulaCategories(prev => prev.filter(cat => cat.id !== categoryId));
-    } catch (error) {
-      console.error('Error fetching formulas:', error);
-    } finally {
-      setIsLoadingFormulas(false);
     }
   };
   
 
   const handleConceptClick = async (concept: string) => {
-    try {
-      // Check if concept card already exists
-      const existingCard = conceptCards.find(card => card.concept.toLowerCase() === concept.toLowerCase());
-      if (existingCard) {
-        // Move to top of the list
-        setConceptCards(prev => [existingCard, ...prev.filter(card => card.id !== existingCard.id)]);
-        return;
-      }
-
-      // Create new concept card
-      const response = await apiService.explainConcept(concept, analysis?.problemSummary);
-      const newCard: ConceptCard = {
-        id: Date.now().toString(),
-        concept,
-        explanation: response.explanation,
-        showRelation: false
-      };
-
-      // Add to top of concept cards
-      setConceptCards(prev => [newCard, ...prev]);
-    } catch (error) {
-      console.error('Error explaining concept:', error);
-    }
-  };
-
-  const handleRelationClick = async (cardId: string) => {
-    const card = conceptCards.find(c => c.id === cardId);
-    if (!card || card.relation) {
-      // Toggle existing relation
-      setConceptCards(prev => prev.map(c => 
-        c.id === cardId ? { ...c, showRelation: !c.showRelation } : c
-      ));
+    // Check if concept card already exists
+    const existingCard = conceptCards.find(card => card.concept.toLowerCase() === concept.toLowerCase());
+    if (existingCard) {
+      // Move to top of the list
+      setConceptCards(prev => [existingCard, ...prev.filter(card => card.id !== existingCard.id)]);
       return;
     }
 
+    // Create optimistic loading card immediately
+    const loadingCard: ConceptCard = {
+      id: Date.now().toString(),
+      concept,
+      explanation: '',
+      relation: '',
+      showRelation: false,
+      isLoading: true
+    };
+
+    // Add loading card to top of concept cards
+    setConceptCards(prev => [loadingCard, ...prev]);
+
     try {
-      // Fetch relation explanation
-      const response = await apiService.explainConceptRelation(card.concept, analysis?.problemSummary);
-      setConceptCards(prev => prev.map(c => 
-        c.id === cardId ? { ...c, relation: response.relation, showRelation: true } : c
+      // Fetch actual content using combined API
+      const response = await apiService.explainConceptCombined(concept, analysis?.problemSummary);
+      
+      // Update the loading card with actual content
+      setConceptCards(prev => prev.map(card => 
+        card.id === loadingCard.id 
+          ? {
+              ...card,
+              explanation: response.explanation,
+              relation: response.relation,
+              isLoading: false
+            }
+          : card
       ));
     } catch (error) {
-      console.error('Error explaining concept relation:', error);
+      console.error('Error explaining concept:', error);
+      // Remove the loading card on error
+      setConceptCards(prev => prev.filter(card => card.id !== loadingCard.id));
     }
+  };
+
+  const handleRelationClick = (cardId: string) => {
+    // Simply toggle the visibility since we already have the relation data
+    setConceptCards(prev => prev.map(c => 
+      c.id === cardId ? { ...c, showRelation: !c.showRelation } : c
+    ));
   };
 
   return (
@@ -245,58 +250,51 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis }) => {
           
         </div>
 
-        <div className="section">
-          <div className="section-header-static">
-            CHEAT SHEET
-          </div>
-
-          {/* Formula Cards - shown above buttons */}
-          {formulaCards.map(card => (
-            <ExpandableCard 
-              key={card.id} 
-              title={card.title}
-              variant="white"
-              defaultExpanded={true}
-            >
-              <Formula 
-                formula={card.formula} 
-                variables={card.variables} 
-                onConceptClick={handleConceptClick}
-              />
-            </ExpandableCard>
-          ))}
-
-          {/* Formula Category Buttons */}
-          {formulaCategories.length > 0 && (
-            <div className="formula-categories">
-              {formulaCategories.map(category => (
-                <AddButton 
-                  key={category.id}
-                  onClick={() => handleAddFormula(category.id, category.name)}
-                >
-                  {category.name}
-                </AddButton>
-              ))}
+        {(formulaCards.length > 0 || formulaCategories.length > 0) && (
+          <div className="section">
+            <div className="section-header-static">
+              CHEAT SHEET
             </div>
-          )}
-          
-          {isLoadingFormulas && (
-            <div className="loading-indicator">Loading formulas...</div>
-          )}
-          
-          {formulaCategories.length === 0 && !isLoadingCategories && (
-            <div className="empty-content">
-              <p>No relevant formulas found</p>
-            </div>
-          )}
-        </div>
 
-        <div className="section">
-          <div className="section-header-static">
-            CONCEPTS
+            {/* Formula Cards - shown above buttons */}
+            {formulaCards.map(card => (
+              <ExpandableCard 
+                key={card.id} 
+                title={card.title}
+                variant="white"
+                defaultExpanded={true}
+              >
+                <Formula 
+                  formula={card.formula} 
+                  variables={card.variables} 
+                  onConceptClick={handleConceptClick}
+                />
+              </ExpandableCard>
+            ))}
+
+            {/* Formula Category Buttons */}
+            {formulaCategories.length > 0 && (
+              <div className="formula-categories">
+                {formulaCategories.map(category => (
+                  <AddButton 
+                    key={category.id}
+                    onClick={() => handleAddFormula(category.id, category.name)}
+                  >
+                    {category.name}
+                  </AddButton>
+                ))}
+              </div>
+            )}
           </div>
-          
-          {conceptCards.map((card) => (
+        )}
+
+        {conceptCards.length > 0 && (
+          <div className="section">
+            <div className="section-header-static">
+              CONCEPTS
+            </div>
+            
+            {conceptCards.map((card) => (
             <ExpandableCard 
               key={card.id}
               title={card.concept}
@@ -305,27 +303,33 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis }) => {
             >
               <div className="concept-content">
                 <div className="concept-explanation">
-                  {parseHighlightedText(card.explanation).map((segment, index) => (
-                    segment.isHighlighted ? (
-                      <button 
-                        key={index}
-                        className="highlighted-text"
-                        onClick={() => handleConceptClick(segment.text)}
-                      >
-                        {segment.text}
-                      </button>
-                    ) : (
-                      <span key={index}>{segment.text}</span>
-                    )
-                  ))}
+                  {card.isLoading ? (
+                    <LoadingIndicator variant="minimal" />
+                  ) : (
+                    parseHighlightedText(card.explanation).map((segment, index) => (
+                      segment.isHighlighted ? (
+                        <button 
+                          key={index}
+                          className="highlighted-text"
+                          onClick={() => handleConceptClick(segment.text)}
+                        >
+                          {segment.text}
+                        </button>
+                      ) : (
+                        <span key={index}>{segment.text}</span>
+                      )
+                    ))
+                  )}
                 </div>
                 
-                <button 
-                  className="relation-button"
-                  onClick={() => handleRelationClick(card.id)}
-                >
-                  🔍 How does this relate?
-                </button>
+                {!card.isLoading && (
+                  <button 
+                    className="relation-button"
+                    onClick={() => handleRelationClick(card.id)}
+                  >
+                    🔍 How does this relate?
+                  </button>
+                )}
                 
                 {card.showRelation && card.relation && (
                   <div className="relation-content">
@@ -335,8 +339,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis }) => {
               </div>
             </ExpandableCard>
           ))}
-          
-        </div>
+            
+          </div>
+        )}
       </div>
     </div>
   );

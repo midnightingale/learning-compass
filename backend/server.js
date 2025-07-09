@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const Anthropic = require('@anthropic-ai/sdk');
-const { EDUCATIONAL_PROMPT, QUESTION_ANALYSIS_PROMPT, CONCEPT_EXPLANATION_PROMPT, CONCEPT_RELATION_PROMPT, FORMULA_GENERATION_PROMPT } = require('./prompts');
+const { EDUCATIONAL_PROMPT, QUESTION_ANALYSIS_PROMPT, CONCEPT_EXPLANATION_PROMPT, CONCEPT_RELATION_PROMPT, COMBINED_CONCEPT_PROMPT, FORMULA_GENERATION_PROMPT } = require('./prompts');
 
 dotenv.config();
 
@@ -22,7 +22,7 @@ app.use(express.json());
 // Initial chat endpoint with question analysis
 app.post('/api/chat/initial', async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, stream = false } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
@@ -55,47 +55,89 @@ app.post('/api/chat/initial', async (req, res) => {
       console.warn('Failed to parse analysis JSON:', parseError);
       console.warn('Raw response was:', analysisResponse.content[0].text);
       analysis = {
+        title: "Problem Analysis",
         quantities: [],
         goal: null,
-        problemSummary: "Problem analysis unavailable"
+        problemSummary: "Problem analysis unavailable",
+        formulas: []
       };
     }
 
-    // Second call: Generate educational response
-    const educationalResponse = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-latest',
-      max_tokens: 1000,
-      messages: [{
-        role: 'user',
-        content: message
-      }],
-      system: EDUCATIONAL_PROMPT
-    });
+    if (stream) {
+      // Set up streaming response
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
 
-    const assistantMessage = educationalResponse.content[0].text;
+      // Send analysis first
+      res.write(`data: ${JSON.stringify({ type: 'analysis', analysis })}\n\n`);
 
-    res.json({
-      message: assistantMessage,
-      analysis: analysis,
-      success: true
-    });
+      // Second call: Generate educational response with streaming
+      const educationalStream = await anthropic.messages.create({
+        model: 'claude-3-7-sonnet-latest',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: message
+        }],
+        system: EDUCATIONAL_PROMPT,
+        stream: true
+      });
+
+      for await (const chunk of educationalStream) {
+        if (chunk.type === 'content_block_delta') {
+          res.write(`data: ${JSON.stringify({ type: 'content', text: chunk.delta.text })}\n\n`);
+        } else if (chunk.type === 'message_stop') {
+          res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
+          break;
+        }
+      }
+
+      res.end();
+    } else {
+      // Regular non-streaming response
+      const educationalResponse = await anthropic.messages.create({
+        model: 'claude-3-7-sonnet-latest',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: message
+        }],
+        system: EDUCATIONAL_PROMPT
+      });
+
+      const assistantMessage = educationalResponse.content[0].text;
+
+      res.json({
+        message: assistantMessage,
+        analysis: analysis,
+        success: true
+      });
+    }
 
   } catch (error) {
     console.error('Error calling Claude API:', error);
-    res.status(500).json({
-      error: 'Failed to process message',
-      details: error.message
-    });
+    if (req.body.stream) {
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to process message' })}\n\n`);
+      res.end();
+    } else {
+      res.status(500).json({
+        error: 'Failed to process message',
+        details: error.message
+      });
+    }
   }
 });
 
-// Regular chat endpoint
+// Regular chat endpoint with streaming support
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, conversation = [] } = req.body;
+    const { message, conversation = [], images = [], stream = false } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
+    if (!message && (!images || images.length === 0)) {
+      return res.status(400).json({ error: 'Message or image is required' });
     }
 
     // Build conversation history for Claude
@@ -109,34 +151,83 @@ app.post('/api/chat', async (req, res) => {
         role: msg.type === 'user' ? 'user' : 'assistant',
         content: msg.content
       })),
-      // Add current message
+      // Add current message with images if present
       {
         role: 'user',
-        content: message
+        content: images.length > 0 
+          ? [
+              ...images.map(img => ({
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: img.type,
+                  data: img.data
+                }
+              })),
+              {
+                type: 'text',
+                text: message || "What can you help me understand about this image?"
+              }
+            ]
+          : (message || "What can you help me understand about this image?")
       }
     ];
 
-    // Call Claude API
-    const response = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-latest',
-      max_tokens: 1000,
-      messages: messages.slice(1), // Remove system message from messages array
-      system: EDUCATIONAL_PROMPT
-    });
+    if (stream) {
+      // Set up streaming response
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
 
-    const assistantMessage = response.content[0].text;
+      // Call Claude API with streaming
+      const stream = await anthropic.messages.create({
+        model: 'claude-3-7-sonnet-latest',
+        max_tokens: 1000,
+        messages: messages.slice(1), // Remove system message from messages array
+        system: EDUCATIONAL_PROMPT,
+        stream: true
+      });
 
-    res.json({
-      message: assistantMessage,
-      success: true
-    });
+      for await (const chunk of stream) {
+        if (chunk.type === 'content_block_delta') {
+          res.write(`data: ${JSON.stringify({ type: 'content', text: chunk.delta.text })}\n\n`);
+        } else if (chunk.type === 'message_stop') {
+          res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
+          break;
+        }
+      }
+
+      res.end();
+    } else {
+      // Regular non-streaming response
+      const response = await anthropic.messages.create({
+        model: 'claude-3-7-sonnet-latest',
+        max_tokens: 1000,
+        messages: messages.slice(1), // Remove system message from messages array
+        system: EDUCATIONAL_PROMPT
+      });
+
+      const assistantMessage = response.content[0].text;
+
+      res.json({
+        message: assistantMessage,
+        success: true
+      });
+    }
 
   } catch (error) {
     console.error('Error calling Claude API:', error);
-    res.status(500).json({
-      error: 'Failed to process message',
-      details: error.message
-    });
+    if (req.body.stream) {
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to process message' })}\n\n`);
+      res.end();
+    } else {
+      res.status(500).json({
+        error: 'Failed to process message',
+        details: error.message
+      });
+    }
   }
 });
 
@@ -207,6 +298,84 @@ app.post('/api/concept/relate', async (req, res) => {
     console.error('Error explaining concept relation:', error);
     res.status(500).json({
       error: 'Failed to explain concept relation',
+      details: error.message
+    });
+  }
+});
+
+// Combined concept explanation and relation endpoint
+app.post('/api/concept/combined', async (req, res) => {
+  try {
+    const { concept, problemContext } = req.body;
+
+    if (!concept) {
+      return res.status(400).json({ error: 'Concept is required' });
+    }
+
+    const prompt = COMBINED_CONCEPT_PROMPT
+      .replace(/\[CONCEPT\]/g, concept)
+      .replace('[PROBLEM_CONTEXT]', problemContext || 'general STEM problem');
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-7-sonnet-latest',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: prompt + concept
+      }]
+    });
+
+    let conceptData;
+    try {
+      let jsonText = response.content[0].text;
+      
+      // Remove markdown code blocks if present
+      if (jsonText.includes('```json')) {
+        jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```/, '');
+      }
+      
+      conceptData = JSON.parse(jsonText.trim());
+    } catch (parseError) {
+      console.warn('Failed to parse concept JSON:', parseError);
+      console.warn('Raw response was:', response.content[0].text);
+      
+      // Fallback to separate calls
+      const explanationPrompt = CONCEPT_EXPLANATION_PROMPT
+        .replace('[CONCEPT]', concept)
+        .replace('[PROBLEM_CONTEXT]', problemContext || 'general STEM problem');
+      
+      const relationPrompt = CONCEPT_RELATION_PROMPT
+        .replace('[CONCEPT]', concept)
+        .replace('[PROBLEM_CONTEXT]', problemContext || 'general STEM problem');
+
+      const [explanationResponse, relationResponse] = await Promise.all([
+        anthropic.messages.create({
+          model: 'claude-3-7-sonnet-latest',
+          max_tokens: 300,
+          messages: [{ role: 'user', content: explanationPrompt + concept }]
+        }),
+        anthropic.messages.create({
+          model: 'claude-3-7-sonnet-latest',
+          max_tokens: 200,
+          messages: [{ role: 'user', content: relationPrompt + concept }]
+        })
+      ]);
+
+      conceptData = {
+        explanation: explanationResponse.content[0].text,
+        relation: relationResponse.content[0].text
+      };
+    }
+
+    res.json({
+      ...conceptData,
+      success: true
+    });
+
+  } catch (error) {
+    console.error('Error explaining concept:', error);
+    res.status(500).json({
+      error: 'Failed to explain concept',
       details: error.message
     });
   }

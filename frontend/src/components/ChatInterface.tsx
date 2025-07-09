@@ -14,6 +14,7 @@ interface ChatInterfaceProps {
   onClearError?: () => void;
   onBackToLanding?: () => void;
   analysis?: QuestionAnalysis | null;
+  resetTrigger?: number;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
@@ -23,10 +24,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   error, 
   onClearError,
   onBackToLanding,
-  analysis
+  analysis,
+  resetTrigger = 0
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [currentTopic] = useState('Physics - Rotational Motion');
+  const currentTopic = analysis?.title || 'Problem Analysis';
 
   // Input handling is done in MessageInput component
 
@@ -79,7 +81,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           />
         </div>
       </div>
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} analysis={analysis || null} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} analysis={analysis || null} resetTrigger={resetTrigger} />
     </div>
   );
 };

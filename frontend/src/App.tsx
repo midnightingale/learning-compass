@@ -7,7 +7,8 @@ import './App.css';
 
 function App() {
   const [showChat, setShowChat] = useState(false);
-  const { messages, isLoading, error, analysis, sendMessage, clearError, setMessages } = useChat();
+  const [resetTrigger, setResetTrigger] = useState(0);
+  const { messages, isLoading, error, analysis, sendMessage, clearError, clearAnalysis, setMessages } = useChat();
 
   const handleStartChat = async (initialMessage?: string) => {
     setShowChat(true);
@@ -24,6 +25,8 @@ function App() {
     setShowChat(false);
     setMessages([]);
     clearError();
+    clearAnalysis();
+    setResetTrigger(prev => prev + 1);
   };
 
   return (
@@ -39,6 +42,7 @@ function App() {
           onClearError={clearError}
           onBackToLanding={handleBackToLanding}
           analysis={analysis}
+          resetTrigger={resetTrigger}
         />
       )}
     </div>

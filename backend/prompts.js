@@ -17,6 +17,8 @@ Principles:
 8. When providing formulas, use the most generic formulas available. Students usually have paper formula sheets, so they can't easily share theirs with you. 
 Don't make students type out their formulas. You should list some numbered formula options instead and ask which ones they think are useful. DON'T tell them which one is correct right away.
 
+Concepts to highlight are nouns, and usually foundational to the unit where the concept is introduced. 
+Examples of things to highlight: @[concentration], @[current], @[time complexity].
 When highlighting concepts, use this format: @[kinetic energy], @[Newton's second law], @[molarity], etc. If you've highlighted a concept in the past, don't do it again.
 Respond in a casual tone that is similar to the way teenagers text. Don't begin responses with a validating exclamation. Only validate the student when they are actually correct.
 Aim for <20 words TOTAL. Strictly ONE idea at a time, OR ask JUST ONE question at a time. If you ask more than one question, the student will get sad and confused and stop engaging, so don't do that!! Use lowercase only.
@@ -28,18 +30,36 @@ const QUESTION_ANALYSIS_PROMPT = `
 analyze this problem and extract structured info. return ONLY valid JSON with no formatting or markdown:
 
 {
+  "title": "string",
   "quantities": ["string"],
   "goal": "string",
   "problemSummary": "string",
-  "resources": ["string"]
+  "formulas": [
+    {
+      "title": "string",
+      "formula": "string",
+      "variables": [
+        {
+          "symbol": "string",
+          "name": "string",
+          "description": "string"
+        }
+      ]
+    }
+  ]
 }
 
 rules:
+- title: short descriptive title for the problem (e.g., "Projectile Motion", "Chemical Equilibrium", "Circuit Analysis")
 - quantities: array of given values/measurements as simple strings (e.g., ["mass: 5kg", "velocity: 10 m/s"]). if gravity is directly relevant, include it. return [] if none
 - goal: A very simple sentence describing what needs to be found/solved (e.g., "Find the velocity of the ball.", "Calculate the pH of the solution of NaOH and HCl."). return null if unclear
 - problemSummary: 1 sentence describing the situation, don't include the goal
-- resources: array of strings describing relevant reference materials/formulas for this problem (e.g., ["Rotational Kinematics Formulas", "Energy Conservation Formulas", "Molar Masses", "Gas Laws"]). return [] if none needed
-- use plain text only, no formatting or special characters
+- formulas: array of relevant formula objects for this problem. Each formula should have:
+  - title: descriptive name that describes CONTENT only (e.g., "Molar Weight of NaCl", "Kinetic Energy Formula") NOT the actual values (e.g., NOT "Molar Weight of NaCl = 45.6")
+  - formula: LaTeX formatted primary formula most relevant to this problem (e.g., "v = v_0 + at", "KE = \\frac{1}{2}mv^2")
+  - variables: array of all variables in the formula with symbol, name, and description
+- use plain text only, no formatting or special characters except in LaTeX formulas
+- return [] for formulas if none needed
 
 question:
 `;
@@ -57,6 +77,23 @@ explain why [CONCEPT] is important in this problem, in middle school language,
 in order to help me understand the concept in context. Don't use analogies. 
 Don't begin with 'concept is related because' — omit that part of the sentence. 
 Use only one conjunction. You must keep it in fewer than 3 sentences!!! All sentences must be <15 words.
+
+Problem context: [PROBLEM_CONTEXT]
+Concept: `;
+
+const COMBINED_CONCEPT_PROMPT = `
+explain [CONCEPT] to me in middle school language, in just one easy-to-read sentence, specifically in the context of this problem. Don't use analogies or examples. Don't mention units in the first sentence. If units are relevant, specify it at the end in this format: Units: [unit].
+
+Use @[term] format to highlight any scientific terms that students might want to click for more explanation.
+
+Also explain why [CONCEPT] is important in this problem, in middle school language, in order to help me understand the concept in context. Don't use analogies. Don't begin with 'concept is related because' — omit that part of the sentence. Use only one conjunction. You must keep it in fewer than 3 sentences!!! All sentences must be <15 words.
+
+Return ONLY valid JSON with no formatting or markdown:
+
+{
+  "explanation": "string",
+  "relation": "string"
+}
 
 Problem context: [PROBLEM_CONTEXT]
 Concept: `;
@@ -95,5 +132,6 @@ module.exports = {
   QUESTION_ANALYSIS_PROMPT,
   CONCEPT_EXPLANATION_PROMPT,
   CONCEPT_RELATION_PROMPT,
+  COMBINED_CONCEPT_PROMPT,
   FORMULA_GENERATION_PROMPT
 };
