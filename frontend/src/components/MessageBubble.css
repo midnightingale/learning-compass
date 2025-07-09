@@ -29,25 +29,3 @@
 
 
 
-/* Code block styling */
-.code-block {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin: 0.5rem 0;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 0.85rem;
-  overflow-x: auto;
-  white-space: pre;
-  color: #111827;
-}
-
-/* Math formula styling */
-.math-formula {
-  font-family: 'Times New Roman', serif;
-  padding: 0.5rem 0;
-  display: flex;
-  justify-content: center;
-  font-size: 1.1rem;
-}
