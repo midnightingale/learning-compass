@@ -2,7 +2,7 @@ import type { Message } from '../types/message';
 import type { Variable } from '../components/Formula';
 
 const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://learning-compass-api.onrender.com/api'  // You'll need to update this with your actual Render URL
+  ? 'https://your-backend-url.railway.app/api'  // Will be updated after Railway deployment
   : 'http://localhost:3001/api';
 
 export interface QuestionAnalysis {

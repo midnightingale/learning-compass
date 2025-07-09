@@ -11,4 +11,3 @@ node_modules/
 # Backend specific
 backend/node_modules/
 backend/.env
-.vercel
