@@ -3,7 +3,7 @@ import type { Message } from '../types/message';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import Sidebar from './Sidebar';
-import type { QuestionAnalysis } from '../services/api';
+import type { QuestionAnalysis } from '../services/api-types';
 import { BackIcon, CompassIcon } from './icons';
 import './ChatInterface.css';
 

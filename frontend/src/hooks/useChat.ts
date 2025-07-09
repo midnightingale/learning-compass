@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import type { Message } from '../types/message';
-import { apiService, ApiError } from '../services/api';
-import type { QuestionAnalysis } from '../services/api';
+import { apiService } from '../services/api';
+import type { QuestionAnalysis } from '../services/api-types';
+import { ApiError } from '../services/api-types';
 
 interface UseChatReturn {
   messages: Message[];

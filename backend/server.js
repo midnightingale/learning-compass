@@ -58,7 +58,7 @@ const setupStreamingHeaders = (res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
 };
 
-const handleAPIError = (res, message = 'Failed to process message') => {
+const handleApiError = (res, message = 'Failed to process message') => {
   res.write(`data: ${JSON.stringify({ type: 'error', message })}\n\n`);
   res.end();
 };
@@ -135,7 +135,7 @@ app.post('/api/chat/initial', async (req, res) => {
 
   } catch (error) {
     console.error('Error calling Claude API:', error);
-    handleAPIError(res, 'Failed to process message');
+    handleApiError(res, 'Failed to process message');
   }
 });
 
@@ -164,7 +164,7 @@ app.post('/api/chat', async (req, res) => {
 
   } catch (error) {
     console.error('Error calling Claude API:', error);
-    handleAPIError(res, 'Failed to process message');
+    handleApiError(res, 'Failed to process message');
   }
 });
 

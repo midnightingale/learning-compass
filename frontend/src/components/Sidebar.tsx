@@ -7,7 +7,7 @@ import HighlightedText from './HighlightedText';
 import { apiService } from '../services/api';
 import { setGlobalConceptHandler } from '../utils/conceptHandler';
 import { parseHighlightedText } from '../utils/textParser';
-import type { QuestionAnalysis, FormulaCategory } from '../services/api';
+import type { QuestionAnalysis, FormulaCategory } from '../services/api-types';
 import { CompassIcon, CloseIcon, AddIcon } from './icons';
 import './Sidebar.css';
 
