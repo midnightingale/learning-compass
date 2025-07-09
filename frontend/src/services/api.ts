@@ -1,7 +1,7 @@
 import type { Message } from '../types/message';
 import type { Variable } from '../components/Formula';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:3001/api';
 
 export interface QuestionAnalysis {
   title: string;
