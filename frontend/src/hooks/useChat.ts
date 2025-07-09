@@ -15,11 +15,35 @@ interface UseChatReturn {
   setMessages: (messages: Message[]) => void;
 }
 
+// Constants for message array operations
+const REMOVE_LAST_MESSAGE = -1;
+const REMOVE_LAST_TWO_MESSAGES = -2;
+
 export const useChat = (): UseChatReturn => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<QuestionAnalysis | null>(null);
+
+  const handleStreamingUpdate = useCallback((text: string) => {
+    setMessages(prev => {
+      const newMessages = [...prev];
+      const lastMessage = newMessages[newMessages.length - 1];
+      if (lastMessage?.type === 'assistant') {
+        newMessages[newMessages.length - 1] = {
+          ...lastMessage,
+          content: lastMessage.content + text
+        };
+      }
+      return newMessages;
+    });
+  }, []);
+
+  const handleError = useCallback((errorMessage: string, removeMessages: number = REMOVE_LAST_MESSAGE) => {
+    setError(errorMessage);
+    setMessages(prev => prev.slice(0, removeMessages));
+    setIsLoading(false);
+  }, []);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -46,19 +70,7 @@ export const useChat = (): UseChatReturn => {
       if (messages.length === 0) {
         await apiService.sendInitialMessageStream(
           content.trim(),
-          (text: string) => {
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMessage = newMessages[newMessages.length - 1];
-              if (lastMessage?.type === 'assistant') {
-                newMessages[newMessages.length - 1] = {
-                  ...lastMessage,
-                  content: lastMessage.content + text
-                };
-              }
-              return newMessages;
-            });
-          },
+          handleStreamingUpdate,
           (analysisData: QuestionAnalysis) => {
             console.log('Initial response analysis:', analysisData);
             setAnalysis(analysisData);
@@ -67,9 +79,7 @@ export const useChat = (): UseChatReturn => {
             setIsLoading(false);
           },
           (errorMessage: string) => {
-            setError(errorMessage);
-            setMessages(prev => prev.slice(0, -1)); // Remove placeholder assistant message
-            setIsLoading(false);
+            handleError(errorMessage, REMOVE_LAST_MESSAGE);
           }
         );
       } else {
@@ -78,26 +88,12 @@ export const useChat = (): UseChatReturn => {
             message: content.trim(),
             conversation: messages
           },
-          (text: string) => {
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMessage = newMessages[newMessages.length - 1];
-              if (lastMessage?.type === 'assistant') {
-                newMessages[newMessages.length - 1] = {
-                  ...lastMessage,
-                  content: lastMessage.content + text
-                };
-              }
-              return newMessages;
-            });
-          },
+          handleStreamingUpdate,
           () => {
             setIsLoading(false);
           },
           (errorMessage: string) => {
-            setError(errorMessage);
-            setMessages(prev => prev.slice(0, -1)); // Remove placeholder assistant message
-            setIsLoading(false);
+            handleError(errorMessage, REMOVE_LAST_MESSAGE);
           }
         );
       }
@@ -108,13 +104,9 @@ export const useChat = (): UseChatReturn => {
         errorMessage = err.message;
       }
       
-      setError(errorMessage);
-      
-      // Remove both user and placeholder assistant messages
-      setMessages(prev => prev.slice(0, -2));
-      setIsLoading(false);
+      handleError(errorMessage, REMOVE_LAST_TWO_MESSAGES);
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, handleStreamingUpdate, handleError]);
 
   const clearError = useCallback(() => {
     setError(null);
