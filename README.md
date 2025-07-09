@@ -27,9 +27,10 @@ Handles:
 
 ## the design
 My design philosophy is that without a user, I’ve got no one to build for. I hopped into FigJam to discuss mockups with Maddie, and then whipped up designs in Figma. I incorporated feedback from Maddie and other learners of all ages repeatedly throughout the process.
-![](Landing.png)
-![](Mockup_%20concept%20card-1.png)
-![](Mockup_%20formulas.png)
+![Landing](https://github.com/user-attachments/assets/a7abbc4c-ba20-4c2e-b0c2-43c82f266734)
+![Mockup_ concept card-1](https://github.com/user-attachments/assets/8cdd9916-7a5c-491e-847b-8cfb84102184)
+![Mockup_ formulas](https://github.com/user-attachments/assets/8d66f118-99de-4e2f-ba4e-1a5476865d2d)
+
 
 ## learning principles
 1. Students practice **active construction** to build their understanding, with the aid of the interactive formulas and concept cards.
@@ -49,4 +50,5 @@ Additionally, we should observe qualitatively whether students are using the sca
 
 
 —
+
 made with ♡ by sophie
