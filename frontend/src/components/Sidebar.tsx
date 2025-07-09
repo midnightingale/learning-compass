@@ -4,6 +4,7 @@ import ExpandableCard from './ExpandableCard';
 import AddButton from './AddButton';
 import Formula from './Formula';
 import LoadingIndicator from './LoadingIndicator';
+import HighlightedText from './HighlightedText';
 import { apiService } from '../services/api';
 import { setGlobalConceptHandler } from '../utils/conceptHandler';
 import { parseHighlightedText } from '../utils/textParser';
@@ -308,13 +309,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
                   ) : (
                     parseHighlightedText(card.explanation).map((segment, index) => (
                       segment.isHighlighted ? (
-                        <button 
+                        <HighlightedText 
                           key={index}
-                          className="highlighted-text"
+                          text={segment.text}
                           onClick={() => handleConceptClick(segment.text)}
-                        >
-                          {segment.text}
-                        </button>
+                        />
                       ) : (
                         <span key={index}>{segment.text}</span>
                       )

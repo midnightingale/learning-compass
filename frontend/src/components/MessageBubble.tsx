@@ -1,6 +1,7 @@
 import type { Message } from '../types/message';
 import { parseHighlightedText } from '../utils/textParser';
 import { handleConceptClick } from '../utils/conceptHandler';
+import HighlightedText from './HighlightedText';
 import './MessageBubble.css';
 
 interface MessageBubbleProps {
@@ -16,13 +17,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
       <div className="message-content">
         {segments.map((segment, index) => (
           segment.isHighlighted ? (
-            <button 
+            <HighlightedText 
               key={index}
-              className="highlighted-text"
+              text={segment.text}
               onClick={() => handleConceptClick(segment.text)}
-            >
-              {segment.text}
-            </button>
+            />
           ) : (
             <span key={index}>{segment.text}</span>
           )
