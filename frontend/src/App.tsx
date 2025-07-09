@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { Message } from './types/message';
 import ChatInterface from './components/ChatInterface';
 import LandingPage from './components/LandingPage';
 import { useChat } from './hooks/useChat';

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import SendButton from './SendButton';
+import TextInput from './TextInput';
+import { CompassIcon } from './icons';
 import './LandingPage.css';
 
 interface LandingPageProps {
@@ -7,13 +7,8 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onStartChat }) => {
-  const [input, setInput] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (input.trim()) {
-      onStartChat(input.trim());
-    }
+  const handleSubmit = (message: string) => {
+    onStartChat(message);
   };
 
   const sampleQuestions = [
@@ -27,27 +22,21 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartChat }) => {
       <div className="landing-content">
         <div className="header">
           <h1>
-            <svg className="compass-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-            </svg>
+            <CompassIcon className="compass-icon" />
             learning compass
           </h1>
           <p>complex problems into simple solutions</p>
         </div>
         
-        <form onSubmit={handleSubmit} className="chat-form">
-          <div className="input-container">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="how can I help?"
-              rows={3}
-              className="chat-input"
-            />
-            <SendButton type="submit" disabled={!input.trim()} />
-          </div>
-        </form>
+        <div className="chat-form">
+          <TextInput
+            onSubmit={handleSubmit}
+            placeholder="how can I help?"
+            rows={3}
+            autoResize={false}
+            clearOnSubmit={false}
+          />
+        </div>
 
         <div className="sample-questions">
           <h3>Sample Problems</h3>

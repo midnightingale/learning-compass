@@ -44,7 +44,7 @@
   padding: 0;
   margin: 0;
   font-size: 0.9rem;
-  color: #C96342;
+  color: #d04518;
   cursor: pointer;
   text-decoration: underline;
   text-decoration-style: dotted;
@@ -67,7 +67,6 @@
   color: #4b5563;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   z-index: 10;
-  max-width: 250px;
   white-space: normal;
   word-wrap: break-word;
   line-height: 1.4;

@@ -9,6 +9,7 @@ import { apiService } from '../services/api';
 import { setGlobalConceptHandler } from '../utils/conceptHandler';
 import { parseHighlightedText } from '../utils/textParser';
 import type { QuestionAnalysis, FormulaCategory } from '../services/api';
+import { CompassIcon, CloseIcon } from './icons';
 import './Sidebar.css';
 
 interface ConceptCard {
@@ -166,17 +167,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
     <div className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-title">
-          <svg className="compass-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-          </svg>
+          <CompassIcon className="compass-icon" />
           <h3>Learning Compass</h3>
         </div>
         <button className="sidebar-close" onClick={onClose}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <CloseIcon />
         </button>
       </div>
       

@@ -1,0 +1,44 @@
+.text-input-form {
+  background: transparent;
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.text-input {
+  width: 100%;
+  padding: 0.875rem 3rem 0.875rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  resize: none;
+  min-height: 60px;
+  max-height: none;
+  font-family: inherit;
+  background: white;
+  line-height: 1.5;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.input-container .send-button-shared {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 10;
+  padding: 0.5rem;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: #C96342;
+  box-shadow: 0 0 0 2px rgba(201, 99, 66, 0.1);
+}
+
+.text-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

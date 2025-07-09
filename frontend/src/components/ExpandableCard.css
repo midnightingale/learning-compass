@@ -36,14 +36,6 @@
   text-align: left;
 }
 
-.expandable-card-icon {
-  transition: transform 0.2s ease;
-  color: #787575;
-}
-
-.expandable-card-icon.expanded {
-  transform: rotate(180deg);
-}
 
 .expandable-card-content {
   padding: 0 1rem 1rem 1rem;
