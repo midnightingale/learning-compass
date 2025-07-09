@@ -48,7 +48,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartChat }) => {
                 onClick={() => {
                   onStartChat(question);
                 }}
-                icon={false}
                 style={{ width: '100%' }}
               >
                 {question}

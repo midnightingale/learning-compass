@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import Card from './Card';
 import ExpandableCard from './ExpandableCard';
 import Button from './Button';
 import Formula from './Formula';
@@ -9,7 +8,7 @@ import { apiService } from '../services/api';
 import { setGlobalConceptHandler } from '../utils/conceptHandler';
 import { parseHighlightedText } from '../utils/textParser';
 import type { QuestionAnalysis, FormulaCategory } from '../services/api';
-import { CompassIcon, CloseIcon } from './icons';
+import { CompassIcon, CloseIcon, AddIcon } from './icons';
 import './Sidebar.css';
 
 interface ConceptCard {
@@ -182,9 +181,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
           </div>
           
           {analysis && (
-            <Card>
-              <p className="problem-summary">{analysis.problemSummary}</p>
-            </Card>
+            <ExpandableCard 
+              title="Summary" 
+              defaultExpanded={true}
+            >
+              <p>{analysis.problemSummary}</p>
+            </ExpandableCard>
           )}
           
           {cardOrder.map((cardType) => {
@@ -226,7 +228,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
                   onClick={() => {
                     setShowQuantities(true);
                     setCardOrder(prev => [...prev, 'quantities']);
-                  }} 
+                  }}
+                  icon={AddIcon}
                 >
                   Quantities
                 </Button>
@@ -236,7 +239,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
                   onClick={() => {
                     setShowGoal(true);
                     setCardOrder(prev => [...prev, 'goal']);
-                  }} 
+                  }}
+                  icon={AddIcon}
                 >
                   Goal
                 </Button>
@@ -275,6 +279,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
                   <Button 
                     key={category.id}
                     onClick={() => handleAddFormula(category.id)}
+                    icon={AddIcon}
                   >
                     {category.name}
                   </Button>

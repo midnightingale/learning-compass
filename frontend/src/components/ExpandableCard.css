@@ -36,9 +36,12 @@
   font-family: 'Source Sans 3', sans-serif;
 }
 
-
 .expandable-card-content {
-  padding: 0 1rem 1rem 1rem;
+  padding: 0 1rem 1.2rem 1rem;
   font-family: 'Source Sans 3', sans-serif;
   font-weight: 400;
+}
+
+.expandable-card-content * {
+  margin: 0;
 }

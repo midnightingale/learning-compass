@@ -1,22 +1,20 @@
-import { AddIcon } from './icons';
 import './Button.css';
 
 interface ButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
-  icon?: boolean;
+  icon?: React.ComponentType<{ className?: string }>;
   style?: React.CSSProperties;
-  className?: string;
 }
 
-const Button: React.FC<ButtonProps> = ({ children, onClick, icon = true, style, className = '' }) => {
+const Button: React.FC<ButtonProps> = ({ children, onClick, icon: Icon, style }) => {
   return (
-    <button 
-      className={`button ${className}`} 
+    <button
       onClick={onClick}
       style={style}
+      className="button"
     >
-      {icon && <AddIcon className="button-icon" />}
+      {Icon && <Icon className="button-icon" />}
       {children}
     </button>
   );
