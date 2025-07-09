@@ -1,9 +1,7 @@
 import type { Message } from '../types/message';
 import type { Variable } from '../components/Formula';
 
-const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://your-backend-url.railway.app/api'  // Will be updated after Railway deployment
-  : 'http://localhost:3001/api';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL}/api`;
 
 export interface QuestionAnalysis {
   title: string;
