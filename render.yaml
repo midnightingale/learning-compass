@@ -2,7 +2,7 @@ services:
   # Backend API service
   - type: web
     name: learning-compass-api
-    env: node
+    runtime: node
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
@@ -14,12 +14,12 @@ services:
     # You'll need to add your ANTHROPIC_API_KEY in Render dashboard
 
   # Frontend static site
-  - type: static
+  - type: web
     name: learning-compass-frontend
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
-    publishDir: dist
-    pullRequestPreviewsEnabled: true
+    staticPublishPath: ./dist
     headers:
       - path: /*
         name: X-Frame-Options
