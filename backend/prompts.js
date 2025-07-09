@@ -1,6 +1,6 @@
 // Educational scaffolding prompt for Claude
 const EDUCATIONAL_PROMPT = `
-You are Learning Compass, an AI tutor assisting students with reasoning-based STEM problems. 
+You are Learning Compass, an AI tutor assisting students with reasoning-based problems. 
 Your role is to guide students through problem-solving rather than giving direct answers.
 Use the @[concept] syntax to highlight important terms that students can click for more information. Use these sparingly and only on relevant words.
 
@@ -64,29 +64,20 @@ rules:
 question:
 `;
 
-// Additional prompts can be added here as the system grows
-const CONCEPT_EXPLANATION_PROMPT = `explain [CONCEPT] to me in middle school language, in just one easy-to-read sentence, specifically in the context of this problem. Don't use analogies or examples. Don't mention units in the first sentence. If units are relevant, specify it at the end in this format: Units: [unit].
-
-Use @[term] format to highlight any scientific terms that students might want to click for more explanation.
-
-Problem context: [PROBLEM_CONTEXT]
-Concept to explain: `;
-
-const CONCEPT_RELATION_PROMPT = `
-explain why [CONCEPT] is important in this problem, in middle school language, 
-in order to help me understand the concept in context. Don't use analogies. 
-Don't begin with 'concept is related because' — omit that part of the sentence. 
-Use only one conjunction. You must keep it in fewer than 3 sentences!!! All sentences must be <15 words.
-
-Problem context: [PROBLEM_CONTEXT]
-Concept: `;
-
 const COMBINED_CONCEPT_PROMPT = `
-explain [CONCEPT] to me in middle school language, in just one easy-to-read sentence, specifically in the context of this problem. Don't use analogies or examples. Don't mention units in the first sentence. If units are relevant, specify it at the end in this format: Units: [unit].
+For explanation, explain [CONCEPT] to me in middle school language. DO NOT directly reference parts of the given problem. 
+DO NOT use analogies or examples. Don't mention units in the first sentence. 
+If this is a quantity and units are commonly used to directly measure this, specify it at the end after a newline in this format: Units: [unit].
+Examples of units: km/s, m. Non-examples of units: None, items or objects. Omit non-example units.
+In your explanation, use the @[term] format to highlight any scientific terms that students might want to click for more explanation. 
+DO NOT highlight the first word/concept you are already explaining!! You must keep it in fewer than 3 sentences!!!
 
-Use @[term] format to highlight any scientific terms that students might want to click for more explanation.
+Then, for relation, explain why [CONCEPT] is important in this problem, in middle school language, 
+in order to help me understand the concept in the context of the problem.
+Don't begin with '[CONCEPT] is related because', just get into it. 
+You must keep it in fewer than 3 sentences!!! All sentences must be <15 words.
 
-Also explain why [CONCEPT] is important in this problem, in middle school language, in order to help me understand the concept in context. Don't use analogies. Don't begin with 'concept is related because' — omit that part of the sentence. Use only one conjunction. You must keep it in fewer than 3 sentences!!! All sentences must be <15 words.
+remember, don't reference 
 
 Return ONLY valid JSON with no formatting or markdown:
 
@@ -130,8 +121,6 @@ resource name: `;
 module.exports = {
   EDUCATIONAL_PROMPT,
   QUESTION_ANALYSIS_PROMPT,
-  CONCEPT_EXPLANATION_PROMPT,
-  CONCEPT_RELATION_PROMPT,
   COMBINED_CONCEPT_PROMPT,
   FORMULA_GENERATION_PROMPT
 };
