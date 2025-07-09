@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Card from './Card';
 import ExpandableCard from './ExpandableCard';
-import AddButton from './AddButton';
+import Button from './Button';
 import Formula from './Formula';
 import LoadingIndicator from './LoadingIndicator';
 import HighlightedText from './HighlightedText';
@@ -71,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
   // Set formula categories when analysis changes
   useEffect(() => {
     if (analysis?.formulas) {
-      const categories = analysis.formulas.map((formula, index) => ({
+      const categories = analysis.formulas.map((formula) => ({
         id: formula.title.toLowerCase().replace(/\s+/g, '-'),
         name: formula.title
       }));
@@ -79,7 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
     }
   }, [analysis?.formulas]);
   
-  const handleAddFormula = (categoryId: string, categoryName: string) => {
+  const handleAddFormula = (categoryId: string) => {
     // Check if we already have this formula card
     const existingCard = formulaCards.find(card => card.categoryId === categoryId);
     
@@ -222,24 +222,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
           {analysis && (analysis.quantities?.length > 0 || analysis.goal) && (
             <div className="overview-buttons">
               {analysis.quantities?.length > 0 && !showQuantities && (
-                <AddButton 
+                <Button 
                   onClick={() => {
                     setShowQuantities(true);
                     setCardOrder(prev => [...prev, 'quantities']);
                   }} 
                 >
                   Quantities
-                </AddButton>
+                </Button>
               )}
               {analysis.goal && !showGoal && (
-                <AddButton 
+                <Button 
                   onClick={() => {
                     setShowGoal(true);
                     setCardOrder(prev => [...prev, 'goal']);
                   }} 
                 >
                   Goal
-                </AddButton>
+                </Button>
               )}
             </div>
           )}
@@ -272,12 +272,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
             {formulaCategories.length > 0 && (
               <div className="formula-categories">
                 {formulaCategories.map(category => (
-                  <AddButton 
+                  <Button 
                     key={category.id}
-                    onClick={() => handleAddFormula(category.id, category.name)}
+                    onClick={() => handleAddFormula(category.id)}
                   >
                     {category.name}
-                  </AddButton>
+                  </Button>
                 ))}
               </div>
             )}

@@ -42,7 +42,7 @@ const MessageList: React.FC<MessageListProps> = ({
         <MessageBubble key={index} message={message} />
       ))}
       
-      {isLoading && <LoadingIndicator />}
+      {isLoading && <LoadingIndicator variant="minimal" />}
       
       {error && (
         <div className="error-message">

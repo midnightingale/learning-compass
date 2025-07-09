@@ -39,8 +39,9 @@
 .sidebar-header h3 {
   margin: 0;
   color: #393737;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: 'Source Sans 3', sans-serif;
 }
 
 .sidebar-close {
@@ -64,6 +65,8 @@
   padding: 1rem;
   flex: 1;
   overflow-y: auto;
+  font-family: 'Source Sans 3', sans-serif;
+  font-weight: 400;
 }
 
 
@@ -99,11 +102,12 @@
 }
 
 .section-header-static {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #787575;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  font-family: 'Source Sans 3', sans-serif;
   margin-bottom: 1rem;
 }
 
@@ -245,17 +249,12 @@
 /* Analysis content styles */
 .problem-summary {
   margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  color: #374151;
 }
 
 .goal-section {
   margin-top: 0.75rem;
   padding: 0.5rem 0;
   border-top: 1px solid #f3f4f6;
-  font-size: 0.85rem;
-  color: #374151;
 }
 
 .goal-section strong {
@@ -391,7 +390,6 @@
 
 .quantities-list li {
   margin-bottom: 0.5rem;
-  font-size: 0.875rem;
   color: #1A1A1A;
   padding: 0.25rem 0;
   line-height: 1.4;

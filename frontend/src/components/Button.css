@@ -1,4 +1,4 @@
-.add-button {
+.button {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -11,10 +11,18 @@
   cursor: pointer;
   transition: all 0.2s;
   width: fit-content;
+  font-family: 'Source Sans 3';
+  font-weight: 500;
 }
 
-.add-button:hover {
+.button:hover {
   background: #f9fafb;
   border-color: #d1d5db;
+}
+
+.button-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 

@@ -1,4 +1,5 @@
 import TextInput from './TextInput';
+import Button from './Button';
 import { CompassIcon } from './icons';
 import './LandingPage.css';
 
@@ -23,7 +24,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartChat }) => {
         <div className="header">
           <h1>
             <CompassIcon className="compass-icon" />
-            learning compass
+            Learning Compass
           </h1>
           <p>complex problems into simple solutions</p>
         </div>
@@ -42,15 +43,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartChat }) => {
           <h3>Sample Problems</h3>
           <div className="question-buttons">
             {sampleQuestions.map((question, index) => (
-              <button
+              <Button
                 key={index}
-                className="sample-question"
                 onClick={() => {
                   onStartChat(question);
                 }}
+                icon={false}
+                style={{ width: '100%' }}
               >
                 {question}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

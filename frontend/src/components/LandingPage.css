@@ -33,6 +33,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-family: 'Source Serif 4', serif;
 }
 
 .header p {
@@ -40,6 +41,7 @@
   color: #666;
   margin: 0;
   font-weight: 400;
+  font-family: 'Source Serif 4', serif;
 }
 
 .chat-form {
@@ -99,24 +101,6 @@
   width: 100%;
 }
 
-.sample-question {
-  background: white;
-  color: #333;
-  border: 1px solid #e5e7eb;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-  font-size: 0.9rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.sample-question:hover {
-  background: #f9fafb;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
 
 .compass-icon {
   width: 24px;

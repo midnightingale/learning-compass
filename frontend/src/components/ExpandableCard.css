@@ -30,13 +30,15 @@
 }
 
 .expandable-card-title {
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #1A1A1A;
   text-align: left;
+  font-family: 'Source Sans 3', sans-serif;
 }
 
 
 .expandable-card-content {
   padding: 0 1rem 1rem 1rem;
+  font-family: 'Source Sans 3', sans-serif;
+  font-weight: 400;
 }
