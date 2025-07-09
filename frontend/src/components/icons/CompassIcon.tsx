@@ -7,8 +7,6 @@ interface CompassIconProps {
 
 const CompassIcon: React.FC<CompassIconProps> = ({ className = '', size = 24 }) => {
   const defaultStyles = className.includes('compass-icon') ? {
-    width: '16px',
-    height: '16px',
     color: '#787575'
   } : {};
 

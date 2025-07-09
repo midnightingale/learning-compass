@@ -45,10 +45,7 @@
 }
 
 .chat-form {
-  background: white;
-  border-radius: 0.75rem;
   padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   margin-bottom: 2rem;
   width: 100%;
   max-width: 600px;
@@ -59,24 +56,6 @@
   flex-direction: row;
   gap: 1rem;
 }
-
-.chat-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid #e1e5e9;
-  border-radius: 0.5rem;
-  resize: none;
-  min-height: 100px;
-  font-family: inherit;
-  color: #333;
-}
-
-.chat-input:focus {
-  outline: none;
-  border-color: #6b7280;
-  box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.1);
-}
-
 
 .sample-questions {
   color: #333;

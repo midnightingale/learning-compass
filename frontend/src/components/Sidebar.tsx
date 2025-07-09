@@ -1,35 +1,22 @@
 import { useState, useEffect } from 'react';
 import ExpandableCard from './ExpandableCard';
 import Button from './Button';
-import Formula from './Formula';
-import LoadingIndicator from './LoadingIndicator';
-import HighlightedText from './HighlightedText';
-import { apiService } from '../services/api';
+import ConceptCard, { type ConceptCardData } from './ConceptCard';
+import FormulaCard, { type FormulaCard as FormulaCardType } from './FormulaCard';
+import SectionHeader from './SectionHeader';
 import { setGlobalConceptHandler } from '../utils/conceptHandler';
-import { parseHighlightedText } from '../utils/textParser';
+import { useConceptCardLoader } from './hooks/useConceptCardLoader';
+import { useFormulaCardLoader } from './hooks/useFormulaCardLoader';
 import type { QuestionAnalysis, FormulaCategory } from '../services/api-types';
 import { CompassIcon, CloseIcon, AddIcon } from './icons';
 import './Sidebar.css';
 
-interface ConceptCard {
-  id: string;
-  concept: string;
-  explanation: string;
-  relation?: string;
-  showRelation: boolean;
-  isLoading?: boolean;
-}
 
-interface FormulaCard {
+interface OverviewCard {
   id: string;
-  categoryId: string;
+  type: 'goal' | 'quantities';
   title: string;
-  formula: string;
-  variables: Array<{
-    symbol: string;
-    name: string;
-    description: string;
-  }>;
+  content: string | string[];
 }
 
 interface SidebarProps {
@@ -41,126 +28,76 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigger = 0 }) => {
-  const [showGoal, setShowGoal] = useState(false);
-  const [showQuantities, setShowQuantities] = useState(false);
-  const [cardOrder, setCardOrder] = useState<string[]>([]);
-  const [conceptCards, setConceptCards] = useState<ConceptCard[]>([]);
-  
-  // Cheat sheet state
-  const [formulaCategories, setFormulaCategories] = useState<FormulaCategory[]>([]);
-  const [formulaCards, setFormulaCards] = useState<FormulaCard[]>([]);
+  const [overviewCards, setOverviewCards] = useState<OverviewCard[]>([]);
+  const [overviewCategories, setOverviewCategories] = useState<{id: string, name: string, type: 'goal' | 'quantities'}[]>([]);
+  const [availableFormulas, setAvailableFormulas] = useState<FormulaCategory[]>([]);
+  const [formulaCards, setFormulaCards] = useState<FormulaCardType[]>([]);
+  const [conceptCards, setConceptCards] = useState<ConceptCardData[]>([]);
 
   // Reset all state when resetTrigger changes
   useEffect(() => {
     if (resetTrigger > 0) {
-      setShowGoal(false);
-      setShowQuantities(false);
-      setCardOrder([]);
+      setOverviewCards([]);
+      setOverviewCategories([]);
       setConceptCards([]);
-      setFormulaCategories([]);
+      setAvailableFormulas([]);
       setFormulaCards([]);
     }
   }, [resetTrigger]);
 
-  // Set up global concept handler
+  // Set overview categories when analysis is returned
   useEffect(() => {
-    setGlobalConceptHandler(handleConceptClick);
-  }, []);
-  
-  // Set formula categories when analysis changes
+    if (analysis) {
+      const categories = [];
+      if (analysis.goal) {
+        categories.push({ id: 'goal', name: 'Goal', type: 'goal' as const });
+      }
+      if (analysis.quantities && analysis.quantities.length > 0) {
+        categories.push({ id: 'quantities', name: 'Quantities', type: 'quantities' as const });
+      }
+      setOverviewCategories(categories);
+    }
+  }, [analysis]);
+
+  // Set formulas when analysis is returned
   useEffect(() => {
     if (analysis?.formulas) {
-      const categories = analysis.formulas.map((formula) => ({
+      const formulas = analysis.formulas.map((formula) => ({
         id: formula.title.toLowerCase().replace(/\s+/g, '-'),
         name: formula.title
       }));
-      setFormulaCategories(categories);
+      setAvailableFormulas(formulas);
     }
   }, [analysis?.formulas]);
   
-  const handleAddFormula = (categoryId: string) => {
-    // Check if we already have this formula card
-    const existingCard = formulaCards.find(card => card.categoryId === categoryId);
+  // Card reveal handlers
+  const handleAddOverview = (categoryId: string) => {
+    // Find the category from available categories
+    const category = overviewCategories.find(cat => cat.id === categoryId);
     
-    if (existingCard) {
-      // Move to top of the list
-      setFormulaCards(prev => [existingCard, ...prev.filter(card => card.id !== existingCard.id)]);
-      return;
-    }
-    
-    // Find the formula from analysis data
-    const formula = analysis?.formulas.find(f => 
-      f.title.toLowerCase().replace(/\s+/g, '-') === categoryId
-    );
-    
-    if (formula) {
-      const newCard: FormulaCard = {
-        id: Date.now().toString(),
-        categoryId,
-        title: formula.title,
-        formula: formula.formula,
-        variables: formula.variables
+    if (category && analysis) {
+      const newCard: OverviewCard = {
+        id: categoryId,
+        type: category.type,
+        title: category.name,
+        content: category.type === 'goal' ? analysis.goal || '' : analysis.quantities || []
       };
       
-      // Add to end of formula cards
-      setFormulaCards(prev => [...prev, newCard]);
+      // Add to end of overview cards
+      setOverviewCards(prev => [...prev, newCard]);
       
       // Remove the button from available categories
-      setFormulaCategories(prev => prev.filter(cat => cat.id !== categoryId));
+      setOverviewCategories(prev => prev.filter(cat => cat.id !== categoryId));
     }
   };
   
+  const showFormula = useFormulaCardLoader(setFormulaCards, setAvailableFormulas, analysis);
+  const addConceptCard = useConceptCardLoader(conceptCards, setConceptCards, analysis?.problemSummary);
 
-  const handleConceptClick = async (concept: string) => {
-    // Check if concept card already exists
-    const existingCard = conceptCards.find(card => card.concept.toLowerCase() === concept.toLowerCase());
-    if (existingCard) {
-      // Move to top of the list
-      setConceptCards(prev => [existingCard, ...prev.filter(card => card.id !== existingCard.id)]);
-      return;
-    }
-
-    // Create optimistic loading card immediately
-    const loadingCard: ConceptCard = {
-      id: Date.now().toString(),
-      concept,
-      explanation: '',
-      relation: '',
-      showRelation: false,
-      isLoading: true
-    };
-
-    // Add loading card to top of concept cards
-    setConceptCards(prev => [loadingCard, ...prev]);
-
-    try {
-      // Fetch actual content using combined API
-      const response = await apiService.explainConceptCombined(concept, analysis?.problemSummary);
-      
-      // Update the loading card with actual content
-      setConceptCards(prev => prev.map(card => 
-        card.id === loadingCard.id 
-          ? {
-              ...card,
-              explanation: response.explanation,
-              relation: response.relation,
-              isLoading: false
-            }
-          : card
-      ));
-    } catch (error) {
-      console.error('Error explaining concept:', error);
-      // Remove the loading card on error
-      setConceptCards(prev => prev.filter(card => card.id !== loadingCard.id));
-    }
-  };
-
-  const handleRelationClick = (cardId: string) => {
-    // Simply toggle the visibility since we already have the relation data
-    setConceptCards(prev => prev.map(c => 
-      c.id === cardId ? { ...c, showRelation: !c.showRelation } : c
-    ));
-  };
+  // Set up global concept click handler
+  useEffect(() => {
+    setGlobalConceptHandler(addConceptCard);
+  }, [addConceptCard]);
 
   return (
     <div className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -176,9 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
       
       <div className="sidebar-content">
         <div className="section">
-          <div className="section-header-static">
-            OVERVIEW
-          </div>
+          <SectionHeader text="OVERVIEW" />
           
           {analysis && (
             <ExpandableCard 
@@ -189,99 +124,63 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
             </ExpandableCard>
           )}
           
-          {cardOrder.map((cardType) => {
-            if (cardType === 'goal' && analysis?.goal && showGoal) {
-              return (
-                <ExpandableCard 
-                  key="goal"
-                  title="Goal" 
-                  defaultExpanded={true}
-                >
-                  <p>{analysis.goal}</p>
-                </ExpandableCard>
-              );
-            }
-            if (cardType === 'quantities' && analysis && analysis.quantities?.length > 0 && showQuantities) {
-              return (
-                <ExpandableCard 
-                  key="quantities"
-                  title="Quantities" 
-                  defaultExpanded={true}
-                >
-                  <ul className="quantities-list">
-                    {analysis.quantities.map((quantity, index) => (
-                      <li key={index} className="quantity-item">
-                        {quantity}
-                      </li>
-                    ))}
-                  </ul>
-                </ExpandableCard>
-              );
-            }
-            return null;
-          })}
+          {overviewCards.map((card) => (
+            <ExpandableCard 
+              key={card.id}
+              title={card.title} 
+              defaultExpanded={true}
+            >
+              {card.type === 'goal' ? (
+                <p>{card.content as string}</p>
+              ) : (
+                <ul className="quantities-list">
+                  {(card.content as string[]).map((quantity, index) => (
+                    <li key={index}>
+                      {quantity}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </ExpandableCard>
+          ))}
           
-          {analysis && (analysis.quantities?.length > 0 || analysis.goal) && (
-            <div className="overview-buttons">
-              {analysis.quantities?.length > 0 && !showQuantities && (
+          {overviewCategories.length > 0 && (
+            <div className="button-list">
+              {overviewCategories.map(category => (
                 <Button 
-                  onClick={() => {
-                    setShowQuantities(true);
-                    setCardOrder(prev => [...prev, 'quantities']);
-                  }}
+                  key={category.id}
+                  onClick={() => handleAddOverview(category.id)}
                   icon={AddIcon}
                 >
-                  Quantities
+                  {category.name}
                 </Button>
-              )}
-              {analysis.goal && !showGoal && (
-                <Button 
-                  onClick={() => {
-                    setShowGoal(true);
-                    setCardOrder(prev => [...prev, 'goal']);
-                  }}
-                  icon={AddIcon}
-                >
-                  Goal
-                </Button>
-              )}
+              ))}
             </div>
           )}
           
         </div>
 
-        {(formulaCards.length > 0 || formulaCategories.length > 0) && (
+        {(formulaCards.length > 0 || availableFormulas.length > 0) && (
           <div className="section">
-            <div className="section-header-static">
-              CHEAT SHEET
-            </div>
+            <SectionHeader text="CHEAT SHEET" />
 
-            {/* Formula Cards - shown above buttons */}
             {formulaCards.map(card => (
-              <ExpandableCard 
-                key={card.id} 
-                title={card.title}
-                variant="white"
-                defaultExpanded={true}
-              >
-                <Formula 
-                  formula={card.formula} 
-                  variables={card.variables} 
-                  onConceptClick={handleConceptClick}
-                />
-              </ExpandableCard>
+              <FormulaCard 
+                key={card.id}
+                card={card}
+                onConceptClick={addConceptCard}
+              />
             ))}
 
-            {/* Formula Category Buttons */}
-            {formulaCategories.length > 0 && (
-              <div className="formula-categories">
-                {formulaCategories.map(category => (
+            {availableFormulas.length > 0 && (
+              <div className="button-list ">
+                {availableFormulas.map(formula => (
                   <Button 
-                    key={category.id}
-                    onClick={() => handleAddFormula(category.id)}
+                    key={formula.id}
+                    onClick={() => showFormula(formula.id)}
                     icon={AddIcon}
                   >
-                    {category.name}
+                    {formula.name}
                   </Button>
                 ))}
               </div>
@@ -291,53 +190,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, analysis, resetTrigg
 
         {conceptCards.length > 0 && (
           <div className="section">
-            <div className="section-header-static">
-              CONCEPTS
-            </div>
+            <SectionHeader text="CONCEPTS" />
             
             {conceptCards.map((card) => (
-            <ExpandableCard 
-              key={card.id}
-              title={card.concept}
-              variant="white"
-              defaultExpanded={true}
-            >
-              <div className="concept-content">
-                <div className="concept-explanation">
-                  {card.isLoading ? (
-                    <LoadingIndicator variant="minimal" />
-                  ) : (
-                    parseHighlightedText(card.explanation).map((segment, index) => (
-                      segment.isHighlighted ? (
-                        <HighlightedText 
-                          key={index}
-                          text={segment.text}
-                          onClick={() => handleConceptClick(segment.text)}
-                        />
-                      ) : (
-                        <span key={index}>{segment.text}</span>
-                      )
-                    ))
-                  )}
-                </div>
-                
-                {!card.isLoading && (
-                  <button 
-                    className="relation-button"
-                    onClick={() => handleRelationClick(card.id)}
-                  >
-                    🔍 How does this relate?
-                  </button>
-                )}
-                
-                {card.showRelation && card.relation && (
-                  <div className="relation-content">
-                    <p>{card.relation}</p>
-                  </div>
-                )}
-              </div>
-            </ExpandableCard>
-          ))}
+              <ConceptCard 
+                key={card.id}
+                card={card}
+                onConceptClick={addConceptCard}
+              />
+            ))}
             
           </div>
         )}

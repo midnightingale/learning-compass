@@ -23,7 +23,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartChat }) => {
       <div className="landing-content">
         <div className="header">
           <h1>
-            <CompassIcon className="compass-icon" />
+            <CompassIcon className="compass-icon" size={128} />
             Learning Compass
           </h1>
           <p>complex problems into simple solutions</p>

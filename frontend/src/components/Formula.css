@@ -1,12 +1,6 @@
-.formula-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
 .formula {
   font-family: 'Times New Roman', serif;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   color: #1A1A1A;
   padding: 0.5rem;
   background: #FAF9F5;
@@ -15,6 +9,15 @@
   justify-content: center;
   align-items: center;
   min-height: 3rem;
+}
+
+.formula-container {
+  padding: 1rem;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: center;
 }
 
 .variables-list {
